@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Booking Appointment App</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f0f2f5;
+      color: #333;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+    }
+    
+    .container {
+      background-color: #ffffff;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      padding: 20px;
+      width: 600px;
+      max-width: 100%;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    h1 {
+      margin-top: 0;
+      font-size: 1.5em;
+      color: #4a90e2;
+      text-align: center;
+    }
+    
+    .form-section, .data-section {
+      margin-bottom: 20px;
+    }
+    
+    .form-section label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: bold;
+      color: #4a4a4a;
+    }
+    
+    .form-section input {
+      width: calc(100% - 20px);
+      padding: 10px;
+      margin-bottom: 15px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    
+    .form-section button {
+      background-color: #4a90e2;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      padding: 10px 15px;
+      margin-right: 10px;
+      cursor: pointer;
+      font-size: 0.9em;
+    }
+    
+    .form-section button:hover {
+      background-color: #357abd;
+    }
+    
+    .error {
+      color: red;
+      font-size: 0.9em;
+      margin-top: 10px;
+      text-align: center;
+    }
+    
+    .data-section ul {
+      list-style-type: none;
+      padding: 0;
+    }
+    
+    .data-section li {
+      background-color: #f9f9f9;
+      margin: 5px 0;
+      padding: 10px;
+      border-radius: 4px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+    
+    .data-section li span {
+      display: block;
+    }
+    
+    .actions button {
+      background-color: #e94e77;
+      border: none;
+      border-radius: 4px;
+      padding: 5px 10px;
+      margin: 0 5px;
+      font-size: 0.8em;
+      cursor: pointer;
+    }
+    
+    .actions button.edit {
+      background-color: #f5a623;
+    }
+    
+    .actions button:hover {
+      background-color: #d43f5a;
+    }
+    
+    .actions button.edit:hover {
+      background-color: #f39422;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Booking Appointment</h1>
+    
+    <div class="form-section">
+      <label for="username">Username</label>
+      <input type="text" id="username" required/>
+      
+      <label for="phoneNumber">Phone Number</label>
+      <input type="text" id="phoneNumber" required/>
+      
+      <label for="emailId">Email ID</label>
+      <input type="email" id="emailId" required/>
+      
+      <button id="submitButton">Submit</button>
+      <button id="updateButton" style="display: none;">Update</button>
+      <button id="cancelButton" style="display: none;">Cancel</button>
+      
+      <div id="error" class="error"></div>
+    </div>
+    
+    <div class="data-section">
+      <h2>Booking Data</h2>
+      <ul id="dataList"></ul>
+    </div>
+  </div>
+  
+  <script>
+    let currentEditId = null;
+
+    document.addEventListener("DOMContentLoaded", async function () {
+      await fetchData();
+    });
+
+    function displayError(message) {
+      const errorDiv = document.getElementById("error");
+      errorDiv.textContent = message;
+    }
+
+    function clearError() {
+      const errorDiv = document.getElementById("error");
+      errorDiv.textContent = "";
+    }
+
+    document.getElementById("submitButton").addEventListener("click", async function () {
+      clearError();
+
+      let username = document.getElementById("username").value.trim();
+      let number = document.getElementById("phoneNumber").value.trim();
+      let email = document.getElementById("emailId").value.trim();
+
+      if (!username || !number || !email) {
+        displayError("All fields are required.");
+        return;
+      }
+
+      let data = { name: username, number: number, email: email };
+
+      document.getElementById("username").value = "";
+      document.getElementById("phoneNumber").value = "";
+      document.getElementById("emailId").value = "";
+
+      await fetch("http://localhost:3000/data", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      await fetchData();
+    });
+
+    async function fetchData() {
+      const response = await fetch("http://localhost:3000/data", {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+      });
+
+      const dataList = await response.json();
+      const ul = document.getElementById("dataList");
+      ul.innerHTML = ""; // Clear existing list items
+      dataList.forEach((item) => {
+        const li = document.createElement("li");
+        li.innerHTML = `
+          <span>Name: ${item.name}</span> 
+          <span>Number: ${item.number}</span> 
+          <span>Email: ${item.email}</span> 
+          <div class="actions">
+            <button class='del' data-id='${item.id}'>Delete</button>
+            <button class='edit' data-id='${item.id}'>Edit</button>
+          </div>
+        `;
+        ul.appendChild(li);
+      });
+
+      document.querySelectorAll(".del").forEach((button) => {
+        button.addEventListener("click", async function () {
+          const id = this.getAttribute("data-id");
+          await fetch(`http://localhost:3000/data/${id}`, {
+            method: "DELETE",
+            headers: { "Content-Type": "application/json" },
+          });
+          await fetchData();
+        });
+      });
+
+      document.querySelectorAll(".edit").forEach((button) => {
+        button.addEventListener("click", function () {
+          currentEditId = this.getAttribute("data-id");
+          const li = this.parentElement.parentElement;
+          document.getElementById("username").value = li.querySelector("span:nth-child(1)").textContent.replace("Name: ", "");
+          document.getElementById("phoneNumber").value = li.querySelector("span:nth-child(2)").textContent.replace("Number: ", "");
+          document.getElementById("emailId").value = li.querySelector("span:nth-child(3)").textContent.replace("Email: ", "");
+
+          document.getElementById("submitButton").style.display = "none";
+          document.getElementById("updateButton").style.display = "inline-block";
+          document.getElementById("cancelButton").style.display = "inline-block";
+        });
+      });
+    }
+
+    document.getElementById("updateButton").addEventListener("click", async function () {
+      clearError();
+
+      let username = document.getElementById("username").value.trim();
+      let number = document.getElementById("phoneNumber").value.trim();
+      let email = document.getElementById("emailId").value.trim();
+
+      if (!username || !number || !email) {
+        displayError("All fields are required.");
+        return;
+      }
+
+      let data = { name: username, number: number, email: email };
+
+      await fetch(`http://localhost:3000/data/${currentEditId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+
+      document.getElementById("username").value = "";
+      document.getElementById("phoneNumber").value = "";
+      document.getElementById("emailId").value = "";
+      document.getElementById("submitButton").style.display = "inline-block";
+      document.getElementById("updateButton").style.display = "none";
+      document.getElementById("cancelButton").style.display = "none";
+
+      await fetchData();
+    });
+
+    document.getElementById("cancelButton").addEventListener("click", function () {
+      document.getElementById("username").value = "";
+      document.getElementById("phoneNumber").value = "";
+      document.getElementById("emailId").value = "";
+      document.getElementById("submitButton").style.display = "inline-block";
+      document.getElementById("updateButton").style.display = "none";
+      document.getElementById("cancelButton").style.display = "none";
+      clearError();
+    });
+  </script>
+</body>
+</html>
